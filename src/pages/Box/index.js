@@ -15,11 +15,15 @@ import ImagePicker from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import FileViewer from 'react-native-file-viewer';
 
+import socket from 'socket.io-client';
+
 export default class Box extends Component {
   state = {box: {}};
 
   async componentDidMount() {
     const box = await AsyncStorage.getItem('@RocketBox:box');
+    this.subscribeToNewFiles(box);
+
     try {
       const response = await api.get(`boxes/${box}`);
       console.log(box);
@@ -29,6 +33,18 @@ export default class Box extends Component {
       this.props.navigation.navigate('Main');
     }
   }
+
+  subscribeToNewFiles = box => {
+    const io = socket('http://192.168.0.27:3333');
+
+    io.emit('connectRoom', box);
+
+    io.on('file', data => {
+      this.setState({
+        box: {...this.state.box, files: [data, ...this.state.box.files]},
+      });
+    });
+  };
 
   handleUpload = () => {
     ImagePicker.launchImageLibrary({}, async upload => {
